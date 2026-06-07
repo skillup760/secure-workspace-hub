@@ -9,38 +9,266 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AppWorkspaceRouteImport } from './routes/app.workspace'
+import { Route as AppUploadRouteImport } from './routes/app.upload'
+import { Route as AppSharedRouteImport } from './routes/app.shared'
+import { Route as AppSettingsRouteImport } from './routes/app.settings'
+import { Route as AppDownloadsRouteImport } from './routes/app.downloads'
+import { Route as AppActivityRouteImport } from './routes/app.activity'
+import { Route as AdminWorkspacesRouteImport } from './routes/admin.workspaces'
+import { Route as AdminVpnRouteImport } from './routes/admin.vpn'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminTransfersRouteImport } from './routes/admin.transfers'
+import { Route as AdminSecurityRouteImport } from './routes/admin.security'
+import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AppWorkspaceRoute = AppWorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppUploadRoute = AppUploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSharedRoute = AppSharedRouteImport.update({
+  id: '/shared',
+  path: '/shared',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDownloadsRoute = AppDownloadsRouteImport.update({
+  id: '/downloads',
+  path: '/downloads',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppActivityRoute = AppActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => AppRoute,
+} as any)
+const AdminWorkspacesRoute = AdminWorkspacesRouteImport.update({
+  id: '/workspaces',
+  path: '/workspaces',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminVpnRoute = AdminVpnRouteImport.update({
+  id: '/vpn',
+  path: '/vpn',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminTransfersRoute = AdminTransfersRouteImport.update({
+  id: '/transfers',
+  path: '/transfers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSecurityRoute = AdminSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAuditRoute = AdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/security': typeof AdminSecurityRoute
+  '/admin/transfers': typeof AdminTransfersRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/vpn': typeof AdminVpnRoute
+  '/admin/workspaces': typeof AdminWorkspacesRoute
+  '/app/activity': typeof AppActivityRoute
+  '/app/downloads': typeof AppDownloadsRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/shared': typeof AppSharedRoute
+  '/app/upload': typeof AppUploadRoute
+  '/app/workspace': typeof AppWorkspaceRoute
+  '/admin/': typeof AdminIndexRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/security': typeof AdminSecurityRoute
+  '/admin/transfers': typeof AdminTransfersRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/vpn': typeof AdminVpnRoute
+  '/admin/workspaces': typeof AdminWorkspacesRoute
+  '/app/activity': typeof AppActivityRoute
+  '/app/downloads': typeof AppDownloadsRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/shared': typeof AppSharedRoute
+  '/app/upload': typeof AppUploadRoute
+  '/app/workspace': typeof AppWorkspaceRoute
+  '/admin': typeof AdminIndexRoute
+  '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/security': typeof AdminSecurityRoute
+  '/admin/transfers': typeof AdminTransfersRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/vpn': typeof AdminVpnRoute
+  '/admin/workspaces': typeof AdminWorkspacesRoute
+  '/app/activity': typeof AppActivityRoute
+  '/app/downloads': typeof AppDownloadsRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/shared': typeof AppSharedRoute
+  '/app/upload': typeof AppUploadRoute
+  '/app/workspace': typeof AppWorkspaceRoute
+  '/admin/': typeof AdminIndexRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/app'
+    | '/login'
+    | '/admin/audit'
+    | '/admin/security'
+    | '/admin/transfers'
+    | '/admin/users'
+    | '/admin/vpn'
+    | '/admin/workspaces'
+    | '/app/activity'
+    | '/app/downloads'
+    | '/app/settings'
+    | '/app/shared'
+    | '/app/upload'
+    | '/app/workspace'
+    | '/admin/'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/admin/audit'
+    | '/admin/security'
+    | '/admin/transfers'
+    | '/admin/users'
+    | '/admin/vpn'
+    | '/admin/workspaces'
+    | '/app/activity'
+    | '/app/downloads'
+    | '/app/settings'
+    | '/app/shared'
+    | '/app/upload'
+    | '/app/workspace'
+    | '/admin'
+    | '/app'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/app'
+    | '/login'
+    | '/admin/audit'
+    | '/admin/security'
+    | '/admin/transfers'
+    | '/admin/users'
+    | '/admin/vpn'
+    | '/admin/workspaces'
+    | '/app/activity'
+    | '/app/downloads'
+    | '/app/settings'
+    | '/app/shared'
+    | '/app/upload'
+    | '/app/workspace'
+    | '/admin/'
+    | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  AppRoute: typeof AppRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,12 +276,167 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/app/workspace': {
+      id: '/app/workspace'
+      path: '/workspace'
+      fullPath: '/app/workspace'
+      preLoaderRoute: typeof AppWorkspaceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/upload': {
+      id: '/app/upload'
+      path: '/upload'
+      fullPath: '/app/upload'
+      preLoaderRoute: typeof AppUploadRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/shared': {
+      id: '/app/shared'
+      path: '/shared'
+      fullPath: '/app/shared'
+      preLoaderRoute: typeof AppSharedRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/downloads': {
+      id: '/app/downloads'
+      path: '/downloads'
+      fullPath: '/app/downloads'
+      preLoaderRoute: typeof AppDownloadsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/activity': {
+      id: '/app/activity'
+      path: '/activity'
+      fullPath: '/app/activity'
+      preLoaderRoute: typeof AppActivityRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/admin/workspaces': {
+      id: '/admin/workspaces'
+      path: '/workspaces'
+      fullPath: '/admin/workspaces'
+      preLoaderRoute: typeof AdminWorkspacesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/vpn': {
+      id: '/admin/vpn'
+      path: '/vpn'
+      fullPath: '/admin/vpn'
+      preLoaderRoute: typeof AdminVpnRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/transfers': {
+      id: '/admin/transfers'
+      path: '/transfers'
+      fullPath: '/admin/transfers'
+      preLoaderRoute: typeof AdminTransfersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/security': {
+      id: '/admin/security'
+      path: '/security'
+      fullPath: '/admin/security'
+      preLoaderRoute: typeof AdminSecurityRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/audit': {
+      id: '/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AdminAuditRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminAuditRoute: typeof AdminAuditRoute
+  AdminSecurityRoute: typeof AdminSecurityRoute
+  AdminTransfersRoute: typeof AdminTransfersRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  AdminVpnRoute: typeof AdminVpnRoute
+  AdminWorkspacesRoute: typeof AdminWorkspacesRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAuditRoute: AdminAuditRoute,
+  AdminSecurityRoute: AdminSecurityRoute,
+  AdminTransfersRoute: AdminTransfersRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  AdminVpnRoute: AdminVpnRoute,
+  AdminWorkspacesRoute: AdminWorkspacesRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface AppRouteChildren {
+  AppActivityRoute: typeof AppActivityRoute
+  AppDownloadsRoute: typeof AppDownloadsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppSharedRoute: typeof AppSharedRoute
+  AppUploadRoute: typeof AppUploadRoute
+  AppWorkspaceRoute: typeof AppWorkspaceRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppActivityRoute: AppActivityRoute,
+  AppDownloadsRoute: AppDownloadsRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppSharedRoute: AppSharedRoute,
+  AppUploadRoute: AppUploadRoute,
+  AppWorkspaceRoute: AppWorkspaceRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
+  AppRoute: AppRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
