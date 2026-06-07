@@ -12,7 +12,7 @@ const log = [
   { ts: "11:55:01", actor: "—", action: "FAIL2BAN_BLOCK", target: "203.0.113.7", ip: "—" },
 ];
 
-export const Route = createFileRoute("/_admin/audit")({
+export const Route = createFileRoute("/admin/audit")({
   component: () => (
     <>
       <PageHeader title="Audit logs" description="Immutable append-only event stream. Shipped to Loki." />

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
 
-export const Route = createFileRoute("/_app/downloads")({
+export const Route = createFileRoute("/app/downloads")({
   component: () => (
     <>
       <PageHeader title="Downloads" description="Resumable transfers with Range support." />

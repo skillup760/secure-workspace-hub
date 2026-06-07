@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Upload as UploadIcon, X, CheckCircle2 } from "lucide-react";
 import { useCallback, useState } from "react";
 
-export const Route = createFileRoute("/_app/upload")({
+export const Route = createFileRoute("/app/upload")({
   component: UploadPage,
 });
 

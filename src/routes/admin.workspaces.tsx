@@ -11,7 +11,7 @@ const ws = [
   { name: "shared-engineering", used: 42, quota: 100 },
 ];
 
-export const Route = createFileRoute("/_admin/workspaces")({
+export const Route = createFileRoute("/admin/workspaces")({
   component: () => (
     <>
       <PageHeader title="Workspaces" description="Per-user and shared, with POSIX quotas." />

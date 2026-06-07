@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { usePresence } from "@/lib/ws-client";
 import { Badge } from "@/components/ui/badge";
 
-export const Route = createFileRoute("/_app")({
+export const Route = createFileRoute("/app")({
   component: AppLayout,
 });
 

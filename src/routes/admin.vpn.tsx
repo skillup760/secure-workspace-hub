@@ -12,7 +12,7 @@ const peers = [
   { name: "carol-desk", ip: "10.66.0.12", handshake: "—", rx: "—", tx: "—", status: "down" },
 ];
 
-export const Route = createFileRoute("/_admin/vpn")({
+export const Route = createFileRoute("/admin/vpn")({
   component: () => (
     <>
       <PageHeader

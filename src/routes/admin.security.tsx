@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { ShieldAlert, Lock, Ban, Activity } from "lucide-react";
 
-export const Route = createFileRoute("/_admin/security")({
+export const Route = createFileRoute("/admin/security")({
   component: () => (
     <>
       <PageHeader title="Security events" description="Fail2Ban, CrowdSec, and app-level signals." />

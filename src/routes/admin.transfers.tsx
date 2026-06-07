@@ -13,7 +13,7 @@ const seed: Live[] = [
   { id: "3", user: "carol", file: "audit-evidence.zip", pct: 88, dir: "down" },
 ];
 
-export const Route = createFileRoute("/_admin/transfers")({
+export const Route = createFileRoute("/admin/transfers")({
   component: TransfersPage,
 });
 

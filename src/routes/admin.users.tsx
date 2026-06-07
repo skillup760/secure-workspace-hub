@@ -14,7 +14,7 @@ const users = [
   { username: "dave", email: "dave@corp.io", role: "user", status: "locked", mfa: false },
 ];
 
-export const Route = createFileRoute("/_admin/users")({
+export const Route = createFileRoute("/admin/users")({
   component: () => (
     <>
       <PageHeader

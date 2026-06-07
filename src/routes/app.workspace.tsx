@@ -18,7 +18,7 @@ const initial: Node[] = [
   { name: "notes.md", isDir: false, size: "12 KB", updated: "5m ago" },
 ];
 
-export const Route = createFileRoute("/_app/workspace")({
+export const Route = createFileRoute("/app/workspace")({
   component: WorkspacePage,
 });
 

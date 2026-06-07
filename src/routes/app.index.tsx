@@ -7,7 +7,7 @@ import { HardDrive, Upload, Download, Activity } from "lucide-react";
 import { useRealtime } from "@/lib/ws-client";
 import { useState } from "react";
 
-export const Route = createFileRoute("/_app/")({
+export const Route = createFileRoute("/app/")({
   component: UserDashboard,
 });
 
