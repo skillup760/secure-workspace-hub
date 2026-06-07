@@ -17,8 +17,8 @@ function LoginPage() {
   const navigate = useNavigate();
   const [stage, setStage] = useState<"creds" | "mfa">("creds");
   const [txId, setTxId] = useState("");
-  const [email, setEmail] = useState("admin@secureshare.local");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState("admin@example.com");
+  const [password, setPassword] = useState("admin");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
 

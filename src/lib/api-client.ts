@@ -1,16 +1,24 @@
 // REST API client for SecureShare backend.
-// Replace VITE_API_URL with your NestJS/Next API base, e.g. https://share.example.com/api/v1
+// Replace VITE_API_URL with your API base, e.g. https://share.example.com/api/v1
 const BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 
 export type ApiError = { status: number; message: string };
 
+function getAuthToken() {
+  return typeof localStorage !== "undefined" ? localStorage.getItem("auth_token") : null;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = getAuthToken();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(init.headers ?? {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
   const res = await fetch(`${BASE}${path}`, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
+    headers,
     ...init,
   });
   if (!res.ok) {
@@ -61,9 +69,9 @@ export type FileNode = {
 
 export const auth = {
   login: (email: string, password: string) =>
-    api.post<{ mfaRequired: boolean; txId?: string }>("/auth/login", { email, password }),
+    api.post<{ mfaRequired: boolean; txId?: string; token?: string; user?: User }>("/auth/login", { email, password }),
   loginMfa: (txId: string, code: string) =>
-    api.post<{ ok: true }>("/auth/login/mfa", { txId, code }),
+    api.post<{ ok: true; token: string }>("/auth/login/mfa", { txId, code }),
   logout: () => api.post<void>("/auth/logout"),
   me: () => api.get<User>("/me"),
 };
@@ -78,6 +86,23 @@ export const workspaces = {
     api.patch<FileNode>(`/workspaces/${id}/files/${encodeURIComponent(from)}`, { to }),
   remove: (id: number, path: string) =>
     api.del<void>(`/workspaces/${id}/files/${encodeURIComponent(path)}`),
+  uploadFile: async (id: number, file: File, path = "/") => {
+    const token = getAuthToken();
+    const fd = new FormData();
+    fd.append("file", file);
+    if (path) fd.append("path", path);
+
+    const res = await fetch(`${BASE}/workspaces/${id}/upload`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: fd,
+    });
+    if (!res.ok) {
+      const message = await res.text().catch(() => res.statusText);
+      throw { status: res.status, message } as ApiError;
+    }
+    return (await res.json()) as FileNode;
+  },
 };
 
 export const admin = {

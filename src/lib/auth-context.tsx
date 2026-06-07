@@ -13,7 +13,7 @@ type AuthState = {
 const Ctx = createContext<AuthState | null>(null);
 
 // Mock user toggle — flip to true to preview the app without a backend.
-const MOCK = import.meta.env.VITE_MOCK_AUTH === "1" || true;
+const MOCK = import.meta.env.VITE_MOCK_AUTH === "1";
 
 const mockUser: User = {
   id: 1,
@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(await auth.me());
       }
     } catch {
+      localStorage.removeItem("auth_token");
       setUser(null);
     } finally {
       setLoading(false);
@@ -56,7 +57,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (password.length < 4) throw { status: 401, message: "Invalid credentials" };
         return { mfaRequired: true, txId: "mock-tx" };
       }
-      return auth.login(email, password);
+
+      const result = await auth.login(email, password);
+      if (!result.mfaRequired && result.token && result.user) {
+        localStorage.setItem("auth_token", result.token);
+        setUser(result.user);
+      }
+      return result;
     },
     loginMfa: async (txId, code) => {
       if (MOCK) {
@@ -65,7 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(mockUser);
         return;
       }
-      await auth.loginMfa(txId, code);
+
+      const result = await auth.loginMfa(txId, code);
+      localStorage.setItem("auth_token", result.token);
       await refresh();
     },
     logout: async () => {
@@ -73,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("mock_user");
       } else {
         await auth.logout();
+        localStorage.removeItem("auth_token");
       }
       setUser(null);
     },
