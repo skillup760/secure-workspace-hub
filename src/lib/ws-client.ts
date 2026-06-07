@@ -63,9 +63,12 @@ export function useRealtime<T extends RealtimeEvent["type"]>(
   const ref = useRef(handler);
   ref.current = handler;
   useEffect(() => {
-    return realtime.on((ev) => {
+    const off = realtime.on((ev) => {
       if (ev.type === type) ref.current(ev as Extract<RealtimeEvent, { type: T }>);
     });
+    return () => {
+      off();
+    };
   }, [type]);
 }
 
