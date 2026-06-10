@@ -1,0 +1,96 @@
+# Secure Workspace Hub — portable compose stack.
+# Usage:
+#   docker compose up -d                          # app only (SQLite, no AV, no VPN)
+#   docker compose --profile av up -d             # + ClamAV scanner
+#   docker compose --profile vpn up -d            # + WireGuard VPN (Linux host only)
+#   docker compose --profile av --profile vpn --profile proxy up -d   # full stack
+#
+# Runs identically on Windows Server (Docker Desktop / WSL2), Linux, macOS,
+# and Raspberry Pi (arm64). VPN profile requires a Linux kernel host
+# (works on Windows via WSL2 backend; not supported on plain Windows containers).
+
+name: secure-workspace-hub
+
+services:
+  app:
+    build: .
+    image: secure-workspace-hub:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATA_DIR: /data
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      SWH_SCANNER: ${SWH_SCANNER:-noop}        # noop | clamav | defender
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: 3310
+    volumes:
+      - swh-data:/data
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      clamav:
+        condition: service_healthy
+        required: false
+    networks: [swh]
+
+  clamav:
+    image: clamav/clamav:stable
+    profiles: ["av"]
+    restart: unless-stopped
+    volumes:
+      - swh-clamav:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks: [swh]
+
+  proxy:
+    image: caddy:2-alpine
+    profiles: ["proxy"]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - swh-caddy-data:/data
+      - swh-caddy-config:/config
+    depends_on: [app]
+    networks: [swh]
+
+  wireguard:
+    image: linuxserver/wireguard:latest
+    profiles: ["vpn"]
+    restart: unless-stopped
+    cap_add: [NET_ADMIN, SYS_MODULE]
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: ${TZ:-UTC}
+      SERVERPORT: 51820
+      PEERS: ${WG_PEERS:-3}
+      PEERDNS: auto
+      INTERNAL_SUBNET: 10.13.13.0
+    volumes:
+      - swh-wg:/config
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - "51820:51820/udp"
+    networks: [swh]
+
+volumes:
+  swh-data:
+  swh-clamav:
+  swh-wg:
+  swh-caddy-data:
+  swh-caddy-config:
+
+networks:
+  swh:
+    driver: bridge
