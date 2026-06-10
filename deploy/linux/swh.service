@@ -1,0 +1,21 @@
+[Unit]
+Description=Secure Workspace Hub
+After=network.target
+
+[Service]
+Type=simple
+User=swh
+Group=swh
+WorkingDirectory=/opt/swh
+EnvironmentFile=/opt/swh/.env
+ExecStart=/usr/bin/node /opt/swh/index.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/swh/data
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

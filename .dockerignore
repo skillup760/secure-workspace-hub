@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.github
+data
+*.log
+.env
+.env.*
+!.env.example
+diagnose_download.txt
+downloaded_hello.txt
+.workspace
+.agents
+.claude
