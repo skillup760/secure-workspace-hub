@@ -2,7 +2,8 @@
 // Auth primitives: Argon2id passwords, TOTP MFA, JWT access + refresh tokens.
 // Cross-platform: @node-rs/argon2 ships prebuilts for win/linux/mac/arm64.
 import { hash as argonHash, verify as argonVerify, Algorithm } from '@node-rs/argon2';
-import { authenticator } from 'otplib';
+import otplib from 'otplib';
+const { authenticator } = otplib;
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
