@@ -60,15 +60,52 @@ execute(`CREATE TABLE IF NOT EXISTS users (
   roles TEXT DEFAULT 'user',
   mfa_enabled INTEGER DEFAULT 0,
   mfa_secret TEXT,
+  mfa_pending_secret TEXT,
+  failed_attempts INTEGER DEFAULT 0,
+  locked_until TEXT,
+  last_login_at TEXT,
   status TEXT DEFAULT 'active',
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 )`);
 
+// Best-effort migrations for pre-existing DBs (sql.js ignores duplicate-column errors per stmt)
+for (const col of [
+  'ALTER TABLE users ADD COLUMN mfa_pending_secret TEXT',
+  'ALTER TABLE users ADD COLUMN failed_attempts INTEGER DEFAULT 0',
+  'ALTER TABLE users ADD COLUMN locked_until TEXT',
+  'ALTER TABLE users ADD COLUMN last_login_at TEXT',
+]) {
+  try { execute(col); } catch { /* column already exists */ }
+}
+
 execute(`CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL,
   token TEXT UNIQUE NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+)`);
+
+// New: refresh tokens (hashed), rotated on each refresh
+execute(`CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  token_hash TEXT UNIQUE NOT NULL,
+  parent_id TEXT,
+  user_agent TEXT,
+  ip_address TEXT,
+  revoked_at TEXT,
+  expires_at TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+)`);
+
+// New: short-lived MFA challenge transactions
+execute(`CREATE TABLE IF NOT EXISTS mfa_txs (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL,
   expires_at TEXT NOT NULL,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -136,6 +173,7 @@ execute(`CREATE TABLE IF NOT EXISTS security_settings (
 
 const userCount = get('SELECT COUNT(*) as c FROM users');
 if (!userCount || userCount.c === 0) {
+  // Seed legacy sha256 admin/admin — first login auto-upgrades to Argon2id.
   const adminHash = crypto.createHash('sha256').update('admin').digest('hex');
   run(
     'INSERT INTO users (email, username, password_hash, roles, status) VALUES (?, ?, ?, ?, ?)',
