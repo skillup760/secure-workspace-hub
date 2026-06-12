@@ -22,7 +22,10 @@ const ARGON_OPTS = {
   parallelism: 1,
 };
 
-authenticator.options = { window: 1, step: 30, digits: 6 };
+// TOTP defaults: SHA-1, 6 digits, 30s step, ±1 step window (RFC 6238 compatible with Google Authenticator / Authy / 1Password).
+const TOTP_DIGITS = 6;
+const TOTP_STEP = 30;
+const TOTP_WINDOW = 1;
 
 export async function hashPassword(plain) {
   return argonHash(plain, ARGON_OPTS);
