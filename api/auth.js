@@ -84,13 +84,67 @@ export function newMfaTxId() {
   return 'mfa_' + crypto.randomBytes(16).toString('hex');
 }
 
-// TOTP
+// ──────────── TOTP (RFC 6238 / 4226) ────────────
+// Base32 (RFC 4648) — no padding, uppercase.
+const B32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+function base32Encode(buf) {
+  let bits = 0, value = 0, out = '';
+  for (const b of buf) {
+    value = (value << 8) | b;
+    bits += 8;
+    while (bits >= 5) {
+      out += B32_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) out += B32_ALPHABET[(value << (5 - bits)) & 31];
+  return out;
+}
+function base32Decode(str) {
+  const clean = str.replace(/=+$/, '').replace(/\s+/g, '').toUpperCase();
+  let bits = 0, value = 0;
+  const out = [];
+  for (const ch of clean) {
+    const idx = B32_ALPHABET.indexOf(ch);
+    if (idx < 0) throw new Error('Invalid base32 character');
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      out.push((value >>> (bits - 8)) & 0xff);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(out);
+}
+function hotp(secretBuf, counter) {
+  const buf = Buffer.alloc(8);
+  // 64-bit big-endian counter
+  buf.writeUInt32BE(Math.floor(counter / 0x100000000), 0);
+  buf.writeUInt32BE(counter >>> 0, 4);
+  const hmac = crypto.createHmac('sha1', secretBuf).update(buf).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  const bin = ((hmac[offset] & 0x7f) << 24) |
+              ((hmac[offset + 1] & 0xff) << 16) |
+              ((hmac[offset + 2] & 0xff) << 8) |
+              (hmac[offset + 3] & 0xff);
+  return String(bin % 10 ** TOTP_DIGITS).padStart(TOTP_DIGITS, '0');
+}
+
 export function newTotpSecret() {
-  return authenticator.generateSecret();
+  // 20 random bytes → 160 bits → 32 base32 chars (RFC 4226 recommendation).
+  return base32Encode(crypto.randomBytes(20));
 }
 
 export function totpUri(secret, accountName, issuer = 'SecureWorkspaceHub') {
-  return authenticator.keyuri(accountName, issuer, secret);
+  const label = encodeURIComponent(`${issuer}:${accountName}`);
+  const params = new URLSearchParams({
+    secret,
+    issuer,
+    algorithm: 'SHA1',
+    digits: String(TOTP_DIGITS),
+    period: String(TOTP_STEP),
+  });
+  return `otpauth://totp/${label}?${params.toString()}`;
 }
 
 export async function totpQrDataUrl(uri) {
@@ -99,11 +153,20 @@ export async function totpQrDataUrl(uri) {
 
 export function verifyTotp(secret, code) {
   if (!secret || !code) return false;
-  try {
-    return authenticator.check(String(code).trim(), secret);
-  } catch {
-    return false;
+  const normalized = String(code).replace(/\s+/g, '').trim();
+  if (!/^\d{6}$/.test(normalized)) return false;
+  let secretBuf;
+  try { secretBuf = base32Decode(secret); } catch { return false; }
+  const counter = Math.floor(Date.now() / 1000 / TOTP_STEP);
+  for (let w = -TOTP_WINDOW; w <= TOTP_WINDOW; w++) {
+    const expected = hotp(secretBuf, counter + w);
+    // Constant-time compare
+    if (expected.length === normalized.length &&
+        crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(normalized))) {
+      return true;
+    }
   }
+  return false;
 }
 
 export const AUTH_CONSTANTS = {
