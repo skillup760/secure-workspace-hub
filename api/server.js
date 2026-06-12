@@ -277,22 +277,19 @@ app.post('/api/v1/auth/mfa/confirm', authMiddleware, (req, res) => {
   res.json({ mfaEnabled: true });
 });
 
-app.post('/api/v1/auth/mfa/disable', authMiddleware, (req, res) => {
+app.post('/api/v1/auth/mfa/disable', authMiddleware, async (req, res) => {
   const { password, code } = req.body || {};
   if (!password) return res.status(400).json({ message: 'Password required' });
-  // We need a real fn call but only have user row + verifyPassword (async)
-  (async () => {
-    const ok = await verifyPassword(req.user.password_hash, password);
-    if (!ok) return res.status(401).json({ message: 'Invalid password' });
-    if (req.user.mfa_enabled && !verifyTotp(req.user.mfa_secret, code)) {
-      return res.status(401).json({ message: 'Invalid MFA code' });
-    }
-    run('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL, mfa_pending_secret = NULL WHERE id = ?',
-      [req.user.id]);
-    revokeAllUserRefresh(req.user.id);
-    logAudit(req.user.id, 'MFA_DISABLED', 'user', req.user.id, {}, req.ipAddress);
-    res.json({ mfaEnabled: false });
-  })().catch((e) => res.status(500).json({ message: e.message }));
+  const ok = await verifyPassword(req.user.password_hash, password);
+  if (!ok) return res.status(401).json({ message: 'Invalid password' });
+  if (req.user.mfa_enabled && !verifyTotp(req.user.mfa_secret, code)) {
+    return res.status(401).json({ message: 'Invalid MFA code' });
+  }
+  run('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL, mfa_pending_secret = NULL WHERE id = ?',
+    [req.user.id]);
+  revokeAllUserRefresh(req.user.id);
+  logAudit(req.user.id, 'MFA_DISABLED', 'user', req.user.id, {}, req.ipAddress);
+  res.json({ mfaEnabled: false });
 });
 
 // Change password — rotates all refresh tokens
