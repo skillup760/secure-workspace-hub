@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { auth, type User } from "./api-client";
+import { auth, tokenStore, type User } from "./api-client";
 
 type AuthState = {
   user: User | null;
@@ -12,14 +12,14 @@ type AuthState = {
 
 const Ctx = createContext<AuthState | null>(null);
 
-// Mock user toggle — flip to true to preview the app without a backend.
+// Mock toggle — flip VITE_MOCK_AUTH=1 to preview the UI without a backend.
 const MOCK = import.meta.env.VITE_MOCK_AUTH === "1";
 
 const mockUser: User = {
   id: 1,
-  email: "admin@secureshare.local",
+  email: "admin@example.com",
   username: "admin",
-  roles: ["admin"],
+  roles: ["admin", "auditor"],
   mfaEnabled: true,
   status: "active",
 };
@@ -34,11 +34,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (MOCK) {
         const stored = localStorage.getItem("mock_user");
         setUser(stored ? JSON.parse(stored) : null);
-      } else {
+      } else if (tokenStore.getAccess() || tokenStore.getRefresh()) {
         setUser(await auth.me());
+      } else {
+        setUser(null);
       }
     } catch {
-      localStorage.removeItem("auth_token");
+      tokenStore.clear();
       setUser(null);
     } finally {
       setLoading(false);
@@ -57,13 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (password.length < 4) throw { status: 401, message: "Invalid credentials" };
         return { mfaRequired: true, txId: "mock-tx" };
       }
-
       const result = await auth.login(email, password);
-      if (!result.mfaRequired && result.token && result.user) {
-        localStorage.setItem("auth_token", result.token);
-        setUser(result.user);
+      if (result.mfaRequired) {
+        return { mfaRequired: true, txId: result.txId };
       }
-      return result;
+      tokenStore.set(result.accessToken, result.refreshToken);
+      setUser(result.user);
+      return { mfaRequired: false };
     },
     loginMfa: async (txId, code) => {
       if (MOCK) {
@@ -72,17 +74,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(mockUser);
         return;
       }
-
       const result = await auth.loginMfa(txId, code);
-      localStorage.setItem("auth_token", result.token);
-      await refresh();
+      tokenStore.set(result.accessToken, result.refreshToken);
+      setUser(result.user);
     },
     logout: async () => {
       if (MOCK) {
         localStorage.removeItem("mock_user");
       } else {
-        await auth.logout();
-        localStorage.removeItem("auth_token");
+        try { await auth.logout(); } catch { /* ignore */ }
+        tokenStore.clear();
       }
       setUser(null);
     },
