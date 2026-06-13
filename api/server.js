@@ -20,6 +20,7 @@ import {
   verifyTotp,
   AUTH_CONSTANTS,
 } from './auth.js';
+import { scanBuffer, getScannerInfo } from './scanner.js';
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -353,7 +354,7 @@ app.post('/api/v1/workspaces/:id/folders', authMiddleware, (req, res) => {
   res.status(201).json({ name: file.name, path: file.path, isDir: true, size: file.size, updatedAt: file.updated_at });
 });
 
-app.post('/api/v1/workspaces/:id/upload', authMiddleware, upload.single('file'), (req, res) => {
+app.post('/api/v1/workspaces/:id/upload', authMiddleware, upload.single('file'), async (req, res) => {
   const { id } = req.params;
   const folder = req.body.path || '/';
   if (!req.file) return res.status(400).json({ message: 'Missing file' });
@@ -361,6 +362,20 @@ app.post('/api/v1/workspaces/:id/upload', authMiddleware, upload.single('file'),
   if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
   if (workspace.owner_id !== req.user.id) return res.status(403).json({ message: 'Access denied' });
   const buffer = req.file.buffer;
+
+  // Virus scan BEFORE persisting to disk. Infections are blocked; transport
+  // errors fall through as { skipped: true } and are audited.
+  const scan = await scanBuffer(buffer, req.file.originalname);
+  if (!scan.clean) {
+    logAudit(req.user.id, 'FILE_UPLOAD_BLOCKED', 'file', null,
+      { name: req.file.originalname, threat: scan.threat, scanner: scan.scanner }, req.ipAddress);
+    return res.status(422).json({ message: `Malware detected: ${scan.threat}`, scanner: scan.scanner });
+  }
+  if (scan.skipped && scan.error) {
+    logAudit(req.user.id, 'FILE_SCAN_SKIPPED', 'file', null,
+      { name: req.file.originalname, scanner: scan.scanner, error: scan.error }, req.ipAddress);
+  }
+
   const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
   const storagePath = path.join(storageDir, sha256);
   if (!fs.existsSync(storagePath)) fs.writeFileSync(storagePath, buffer);
@@ -368,8 +383,9 @@ app.post('/api/v1/workspaces/:id/upload', authMiddleware, upload.single('file'),
   run('INSERT OR REPLACE INTO files (workspace_id, path, name, is_dir, size, mime_type, sha256, created_by) VALUES (?, ?, ?, 0, ?, ?, ?, ?)',
     [id, filePath, req.file.originalname, buffer.length, req.file.mimetype || 'application/octet-stream', sha256, req.user.id]);
   const file = get('SELECT * FROM files WHERE workspace_id = ? AND path = ?', [id, filePath]);
-  logAudit(req.user.id, 'FILE_UPLOAD', 'file', file.id, { path: filePath, size: buffer.length }, req.ipAddress);
-  res.status(201).json({ name: file.name, path: file.path, size: file.size, mime: file.mime_type, sha256: file.sha256 });
+  logAudit(req.user.id, 'FILE_UPLOAD', 'file', file.id,
+    { path: filePath, size: buffer.length, scanner: scan.scanner }, req.ipAddress);
+  res.status(201).json({ name: file.name, path: file.path, size: file.size, mime: file.mime_type, sha256: file.sha256, scanner: scan.scanner });
 });
 
 app.get('/api/v1/workspaces/:id/files/download', authMiddleware, (req, res) => {
@@ -468,7 +484,12 @@ app.get('/api/v1/admin/audit', authMiddleware, (req, res) => {
 });
 
 app.get('/api/v1/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: nowIso(), jwtConfigured: AUTH_CONSTANTS.JWT_SECRET_PRESENT });
+  res.json({
+    status: 'ok',
+    timestamp: nowIso(),
+    jwtConfigured: AUTH_CONSTANTS.JWT_SECRET_PRESENT,
+    scanner: getScannerInfo(),
+  });
 });
 
-app.listen(4000, () => console.log('✓ API server listening on http://localhost:4000'));
+app.listen(4000, () => console.log(`✓ API server listening on http://localhost:4000 (scanner=${getScannerInfo().scanner})`));
