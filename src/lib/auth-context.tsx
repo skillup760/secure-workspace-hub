@@ -12,8 +12,9 @@ type AuthState = {
 
 const Ctx = createContext<AuthState | null>(null);
 
-// Mock toggle — flip VITE_MOCK_AUTH=1 to preview the UI without a backend.
-const MOCK = import.meta.env.VITE_MOCK_AUTH === "1";
+// Mock auth is ON by default so the Lovable preview works without the local
+// Express API on :4000. Set VITE_MOCK_AUTH=0 in real deployments to hit the real API.
+const MOCK = import.meta.env.VITE_MOCK_AUTH !== "0";
 
 const mockUser: User = {
   id: 1,
