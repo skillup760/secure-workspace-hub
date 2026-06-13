@@ -484,7 +484,14 @@ app.get('/api/v1/admin/audit', authMiddleware, (req, res) => {
 });
 
 app.get('/api/v1/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: nowIso(), jwtConfigured: AUTH_CONSTANTS.JWT_SECRET_PRESENT });
+  res.json({
+    status: 'ok',
+    timestamp: nowIso(),
+    jwtConfigured: AUTH_CONSTANTS.JWT_SECRET_PRESENT,
+    scanner: getScannerInfo(),
+  });
 });
+
+app.listen(4000, () => console.log(`✓ API server listening on http://localhost:4000 (scanner=${getScannerInfo().scanner})`));
 
 app.listen(4000, () => console.log('✓ API server listening on http://localhost:4000'));
