@@ -20,6 +20,7 @@ import {
   verifyTotp,
   AUTH_CONSTANTS,
 } from './auth.js';
+import { scanBuffer, getScannerInfo } from './scanner.js';
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
