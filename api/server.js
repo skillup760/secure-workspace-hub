@@ -493,5 +493,3 @@ app.get('/api/v1/health', (req, res) => {
 });
 
 app.listen(4000, () => console.log(`✓ API server listening on http://localhost:4000 (scanner=${getScannerInfo().scanner})`));
-
-app.listen(4000, () => console.log('✓ API server listening on http://localhost:4000'));
