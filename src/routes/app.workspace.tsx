@@ -133,7 +133,7 @@ function WorkspacePage() {
               </TableRow>
             ) : (
               itemsFiltered.map((n) => (
-                <TableRow key={n.path} className="cursor-pointer">
+                <TableRow key={n.path} className="cursor-pointer" onClick={() => openFile(n)}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {n.isDir ? <Folder className="h-4 w-4 text-primary" /> : <FileText className="h-4 w-4 text-muted-foreground" />}
