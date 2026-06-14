@@ -173,6 +173,112 @@ export const workspaces = {
   },
 };
 
+// ── Live file editing (concurrent read/write on the server) ──
+export type FileContent = {
+  path: string;
+  name: string;
+  content: string;
+  sha256?: string;
+  size: number;
+  mime?: string;
+  updatedAt: string;
+};
+export type SaveResult = {
+  path: string;
+  name: string;
+  sha256: string;
+  size: number;
+  updatedAt: string;
+  conflict?: boolean;
+};
+export type PresenceUser = { id: number; username: string };
+
+// Mock mode mirrors src/lib/auth-context.tsx so the Lovable preview works
+// without a running Express API. In mock, content is persisted to localStorage.
+const MOCK_EDIT = import.meta.env.VITE_MOCK_AUTH !== "0";
+const mockFileKey = (wsId: number, p: string) => `mock:file:${wsId}:${p}`;
+const mockPresKey = (wsId: number, p: string) => `mock:presence:${wsId}:${p}`;
+
+async function sha256Hex(text: string) {
+  if (typeof crypto !== "undefined" && crypto.subtle) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return String(text.length);
+}
+
+export const files = {
+  read: async (workspaceId: number, path: string): Promise<FileContent> => {
+    if (MOCK_EDIT) {
+      const content = localStorage.getItem(mockFileKey(workspaceId, path)) ?? "";
+      return {
+        path,
+        name: path.split("/").pop() ?? path,
+        content,
+        sha256: await sha256Hex(content),
+        size: new Blob([content]).size,
+        mime: "text/plain",
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    return api.get<FileContent>(`/workspaces/${workspaceId}/file?path=${encodeURIComponent(path)}`);
+  },
+  save: async (workspaceId: number, path: string, content: string, baseSha256?: string): Promise<SaveResult> => {
+    if (MOCK_EDIT) {
+      localStorage.setItem(mockFileKey(workspaceId, path), content);
+      return {
+        path,
+        name: path.split("/").pop() ?? path,
+        sha256: await sha256Hex(content),
+        size: new Blob([content]).size,
+        updatedAt: new Date().toISOString(),
+        conflict: false,
+      };
+    }
+    const token = tokenStore.getAccess();
+    const res = await fetch(`${BASE}/workspaces/${workspaceId}/file`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ path, content, baseSha256 }),
+    });
+    if (!res.ok) {
+      const message = await res.text().catch(() => res.statusText);
+      throw { status: res.status, message } as ApiError;
+    }
+    return (await res.json()) as SaveResult;
+  },
+  heartbeat: async (workspaceId: number, path: string, username: string) => {
+    if (MOCK_EDIT) {
+      const key = mockPresKey(workspaceId, path);
+      const now = Date.now();
+      const raw = localStorage.getItem(key);
+      const map: Record<string, { username: string; ts: number }> = raw ? JSON.parse(raw) : {};
+      map[username] = { username, ts: now };
+      for (const k of Object.keys(map)) if (now - map[k].ts > 15_000) delete map[k];
+      localStorage.setItem(key, JSON.stringify(map));
+      return;
+    }
+    await api.post(`/workspaces/${workspaceId}/presence`, { path });
+  },
+  presence: async (workspaceId: number, path: string): Promise<PresenceUser[]> => {
+    if (MOCK_EDIT) {
+      const raw = localStorage.getItem(mockPresKey(workspaceId, path));
+      if (!raw) return [];
+      const map = JSON.parse(raw) as Record<string, { username: string; ts: number }>;
+      const now = Date.now();
+      return Object.values(map)
+        .filter((e) => now - e.ts < 15_000)
+        .map((e, i) => ({ id: i + 1, username: e.username }));
+    }
+    const res = await api.get<{ users: PresenceUser[] }>(`/workspaces/${workspaceId}/presence?path=${encodeURIComponent(path)}`);
+    return res.users;
+  },
+  leave: async (workspaceId: number, path: string) => {
+    if (MOCK_EDIT) return;
+    try { await api.del(`/workspaces/${workspaceId}/presence?path=${encodeURIComponent(path)}`); } catch { /* ignore */ }
+  },
+};
+
 export const admin = {
   listUsers: () => api.get<User[]>("/admin/users"),
   createUser: (input: { email: string; username: string; password: string; role: string }) =>
