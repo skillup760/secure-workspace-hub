@@ -422,6 +422,135 @@ app.delete('/api/v1/workspaces/:id/files/:name', authMiddleware, (req, res) => {
   res.status(204).end();
 });
 
+// ───────────────────────── live text editing (concurrent R/W) ─────────────────────────
+// In-memory presence: who is currently viewing/editing which path.
+// Map key: `${workspaceId}:${path}` → Map<userId, { username, ts }>
+const presence = new Map();
+const PRESENCE_TTL_MS = 15_000;
+
+function presenceKey(wsId, p) { return `${wsId}:${p}`; }
+function gcPresence(key) {
+  const map = presence.get(key);
+  if (!map) return;
+  const cutoff = Date.now() - PRESENCE_TTL_MS;
+  for (const [uid, entry] of map) if (entry.ts < cutoff) map.delete(uid);
+  if (map.size === 0) presence.delete(key);
+}
+
+function assertWorkspaceAccess(req, res, id) {
+  const workspace = get('SELECT * FROM workspaces WHERE id = ?', [id]);
+  if (!workspace) { res.status(404).json({ message: 'Workspace not found' }); return null; }
+  const hasAccess = workspace.owner_id === req.user.id ||
+    Boolean(get('SELECT 1 FROM workspace_users WHERE workspace_id = ? AND user_id = ?', [id, req.user.id]));
+  if (!hasAccess) { res.status(403).json({ message: 'Access denied' }); return null; }
+  return workspace;
+}
+
+// Read full text content of a file (utf-8). Returns content + version metadata.
+app.get('/api/v1/workspaces/:id/file', authMiddleware, (req, res) => {
+  const { id } = req.params;
+  const filePath = req.query.path;
+  if (!filePath) return res.status(400).json({ message: 'Missing path query' });
+  if (!assertWorkspaceAccess(req, res, id)) return;
+
+  const file = get('SELECT * FROM files WHERE workspace_id = ? AND path = ?', [id, filePath]);
+  if (!file) return res.status(404).json({ message: 'File not found' });
+  if (file.is_dir) return res.status(400).json({ message: 'Path is a directory' });
+
+  let content = '';
+  if (file.sha256) {
+    const storagePath = path.join(storageDir, file.sha256);
+    if (fs.existsSync(storagePath)) content = fs.readFileSync(storagePath, 'utf8');
+  }
+  res.json({
+    path: file.path,
+    name: file.name,
+    content,
+    sha256: file.sha256,
+    size: file.size,
+    mime: file.mime_type,
+    updatedAt: file.updated_at,
+  });
+});
+
+// Write (overwrite) text content. Creates file if missing. Last-write-wins.
+// Optional `baseSha256` enables a soft-conflict warning (still saves).
+app.put('/api/v1/workspaces/:id/file', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { path: filePath, content, baseSha256 } = req.body || {};
+  if (!filePath || typeof content !== 'string') return res.status(400).json({ message: 'Missing path or content' });
+  if (content.length > 5 * 1024 * 1024) return res.status(413).json({ message: 'Content too large (5MB limit)' });
+  if (!assertWorkspaceAccess(req, res, id)) return;
+
+  const buffer = Buffer.from(content, 'utf8');
+  const scan = await scanBuffer(buffer, filePath.split('/').pop() || 'file.txt');
+  if (!scan.clean) {
+    logAudit(req.user.id, 'FILE_SAVE_BLOCKED', 'file', null,
+      { path: filePath, threat: scan.threat, scanner: scan.scanner }, req.ipAddress);
+    return res.status(422).json({ message: `Malware detected: ${scan.threat}`, scanner: scan.scanner });
+  }
+
+  const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+  const storagePath = path.join(storageDir, sha256);
+  if (!fs.existsSync(storagePath)) fs.writeFileSync(storagePath, buffer);
+
+  const name = filePath.split('/').pop();
+  const existing = get('SELECT * FROM files WHERE workspace_id = ? AND path = ?', [id, filePath]);
+  const conflict = Boolean(baseSha256 && existing && existing.sha256 && existing.sha256 !== baseSha256);
+  const updatedAt = nowIso();
+
+  if (existing) {
+    run('UPDATE files SET size = ?, sha256 = ?, mime_type = ?, updated_at = ? WHERE id = ?',
+      [buffer.length, sha256, existing.mime_type || 'text/plain', updatedAt, existing.id]);
+  } else {
+    run('INSERT INTO files (workspace_id, path, name, is_dir, size, mime_type, sha256, created_by, updated_at) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?)',
+      [id, filePath, name, buffer.length, 'text/plain', sha256, req.user.id, updatedAt]);
+  }
+  logAudit(req.user.id, 'FILE_SAVE', 'file', existing?.id || null,
+    { path: filePath, size: buffer.length, conflict }, req.ipAddress);
+
+  res.json({ path: filePath, name, sha256, size: buffer.length, updatedAt, conflict });
+});
+
+// Presence heartbeat — call every ~5s while editing.
+app.post('/api/v1/workspaces/:id/presence', authMiddleware, (req, res) => {
+  const { id } = req.params;
+  const { path: filePath } = req.body || {};
+  if (!filePath) return res.status(400).json({ message: 'Missing path' });
+  const key = presenceKey(id, filePath);
+  let map = presence.get(key);
+  if (!map) { map = new Map(); presence.set(key, map); }
+  map.set(req.user.id, { username: req.user.username, ts: Date.now() });
+  gcPresence(key);
+  res.json({ ok: true });
+});
+
+// Presence list — who else is viewing the same file.
+app.get('/api/v1/workspaces/:id/presence', authMiddleware, (req, res) => {
+  const { id } = req.params;
+  const filePath = req.query.path;
+  if (!filePath) return res.status(400).json({ message: 'Missing path query' });
+  const key = presenceKey(id, filePath);
+  gcPresence(key);
+  const map = presence.get(key) || new Map();
+  const users = [];
+  for (const [uid, entry] of map) users.push({ id: uid, username: entry.username });
+  res.json({ users });
+});
+
+// Leave presence (best-effort on unmount).
+app.delete('/api/v1/workspaces/:id/presence', authMiddleware, (req, res) => {
+  const { id } = req.params;
+  const filePath = req.query.path;
+  if (!filePath) return res.status(400).json({ message: 'Missing path query' });
+  const key = presenceKey(id, filePath);
+  const map = presence.get(key);
+  if (map) { map.delete(req.user.id); if (map.size === 0) presence.delete(key); }
+  res.json({ ok: true });
+});
+
+
+
 // ───────────────────────── admin ─────────────────────────
 app.get('/api/v1/admin/users', authMiddleware, requireRole('admin'), (req, res) => {
   const rows = all('SELECT id, email, username, roles, mfa_enabled, status FROM users ORDER BY created_at DESC');
