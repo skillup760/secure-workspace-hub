@@ -22,6 +22,20 @@ function WorkspacePage() {
   const [loading, setLoading] = useState(true);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
+  const navigate = useNavigate();
+
+  const isTextFile = (name: string) =>
+    /\.(txt|md|markdown|json|jsonc|js|jsx|ts|tsx|css|scss|html|xml|yml|yaml|toml|ini|env|csv|log|sh|py|rb|go|rs|java|c|cpp|h|hpp|sql)$/i.test(name);
+
+  const openFile = (n: Node) => {
+    if (n.isDir) return;
+    if (!isTextFile(n.name)) {
+      toast.info("Online editing is only available for text files.");
+      return;
+    }
+    navigate({ to: "/app/edit", search: { ws: 1, path: n.path } });
+  };
+
 
   // Fetch files from backend on mount
   useEffect(() => {
