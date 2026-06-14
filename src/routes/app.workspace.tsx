@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Folder, FileText, MoreVertical, Search, Upload, FolderPlus } from "lucide-react";
+import { Folder, FileText, MoreVertical, Search, Upload, FolderPlus, FilePlus } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import { workspaces } from "@/lib/api-client";
 import { toast } from "sonner";
