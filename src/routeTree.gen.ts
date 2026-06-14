@@ -19,6 +19,7 @@ import { Route as AppWorkspaceRouteImport } from './routes/app.workspace'
 import { Route as AppUploadRouteImport } from './routes/app.upload'
 import { Route as AppSharedRouteImport } from './routes/app.shared'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
+import { Route as AppEditRouteImport } from './routes/app.edit'
 import { Route as AppDownloadsRouteImport } from './routes/app.downloads'
 import { Route as AppActivityRouteImport } from './routes/app.activity'
 import { Route as AdminWorkspacesRouteImport } from './routes/admin.workspaces'
@@ -78,6 +79,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppEditRoute = AppEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDownloadsRoute = AppDownloadsRouteImport.update({
   id: '/downloads',
   path: '/downloads',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/admin/workspaces': typeof AdminWorkspacesRoute
   '/app/activity': typeof AppActivityRoute
   '/app/downloads': typeof AppDownloadsRoute
+  '/app/edit': typeof AppEditRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/shared': typeof AppSharedRoute
   '/app/upload': typeof AppUploadRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/admin/workspaces': typeof AdminWorkspacesRoute
   '/app/activity': typeof AppActivityRoute
   '/app/downloads': typeof AppDownloadsRoute
+  '/app/edit': typeof AppEditRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/shared': typeof AppSharedRoute
   '/app/upload': typeof AppUploadRoute
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/admin/workspaces': typeof AdminWorkspacesRoute
   '/app/activity': typeof AppActivityRoute
   '/app/downloads': typeof AppDownloadsRoute
+  '/app/edit': typeof AppEditRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/shared': typeof AppSharedRoute
   '/app/upload': typeof AppUploadRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces'
     | '/app/activity'
     | '/app/downloads'
+    | '/app/edit'
     | '/app/settings'
     | '/app/shared'
     | '/app/upload'
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces'
     | '/app/activity'
     | '/app/downloads'
+    | '/app/edit'
     | '/app/settings'
     | '/app/shared'
     | '/app/upload'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces'
     | '/app/activity'
     | '/app/downloads'
+    | '/app/edit'
     | '/app/settings'
     | '/app/shared'
     | '/app/upload'
@@ -318,6 +330,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/edit': {
+      id: '/app/edit'
+      path: '/edit'
+      fullPath: '/app/edit'
+      preLoaderRoute: typeof AppEditRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/downloads': {
       id: '/app/downloads'
       path: '/downloads'
@@ -402,6 +421,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 interface AppRouteChildren {
   AppActivityRoute: typeof AppActivityRoute
   AppDownloadsRoute: typeof AppDownloadsRoute
+  AppEditRoute: typeof AppEditRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSharedRoute: typeof AppSharedRoute
   AppUploadRoute: typeof AppUploadRoute
@@ -412,6 +432,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppActivityRoute: AppActivityRoute,
   AppDownloadsRoute: AppDownloadsRoute,
+  AppEditRoute: AppEditRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSharedRoute: AppSharedRoute,
   AppUploadRoute: AppUploadRoute,

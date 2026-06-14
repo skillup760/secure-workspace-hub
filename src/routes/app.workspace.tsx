@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Folder, FileText, MoreVertical, Search, Upload, FolderPlus } from "lucide-react";
+import { Folder, FileText, MoreVertical, Search, Upload, FolderPlus, FilePlus } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import { workspaces } from "@/lib/api-client";
 import { toast } from "sonner";
@@ -22,6 +22,20 @@ function WorkspacePage() {
   const [loading, setLoading] = useState(true);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
+  const navigate = useNavigate();
+
+  const isTextFile = (name: string) =>
+    /\.(txt|md|markdown|json|jsonc|js|jsx|ts|tsx|css|scss|html|xml|yml|yaml|toml|ini|env|csv|log|sh|py|rb|go|rs|java|c|cpp|h|hpp|sql)$/i.test(name);
+
+  const openFile = (n: Node) => {
+    if (n.isDir) return;
+    if (!isTextFile(n.name)) {
+      toast.info("Online editing is only available for text files.");
+      return;
+    }
+    navigate({ to: "/app/edit", search: { ws: 1, path: n.path } });
+  };
+
 
   // Fetch files from backend on mount
   useEffect(() => {
@@ -54,6 +68,9 @@ function WorkspacePage() {
         description="/workspaces/user42 — fully isolated, quota-bound."
         actions={
           <>
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/app/edit", search: { ws: 1, path: "/untitled.txt" } })}>
+              <FilePlus className="h-4 w-4 mr-1.5" />New text file
+            </Button>
             <Button variant="outline" size="sm"><FolderPlus className="h-4 w-4 mr-1.5" />New folder</Button>
             <input ref={inputRef} type="file" hidden onChange={async (e) => {
               const f = e.target.files?.[0];
@@ -116,7 +133,7 @@ function WorkspacePage() {
               </TableRow>
             ) : (
               itemsFiltered.map((n) => (
-                <TableRow key={n.path} className="cursor-pointer">
+                <TableRow key={n.path} className="cursor-pointer" onClick={() => openFile(n)}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {n.isDir ? <Folder className="h-4 w-4 text-primary" /> : <FileText className="h-4 w-4 text-muted-foreground" />}
