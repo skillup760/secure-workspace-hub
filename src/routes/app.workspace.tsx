@@ -68,6 +68,9 @@ function WorkspacePage() {
         description="/workspaces/user42 — fully isolated, quota-bound."
         actions={
           <>
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/app/edit", search: { ws: 1, path: "/untitled.txt" } })}>
+              <FilePlus className="h-4 w-4 mr-1.5" />New text file
+            </Button>
             <Button variant="outline" size="sm"><FolderPlus className="h-4 w-4 mr-1.5" />New folder</Button>
             <input ref={inputRef} type="file" hidden onChange={async (e) => {
               const f = e.target.files?.[0];
